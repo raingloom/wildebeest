@@ -45,7 +45,7 @@ export async function generateVAPIDKeys(db: D1Database) {
 }
 
 export async function get(db: D1Database, name: string): Promise<string> {
-	const row: { value: string } = await db.prepare('SELECT value FROM instance_config WHERE key = ?').bind(name).first()
+	const row = await db.prepare('SELECT value FROM instance_config WHERE key = ?').bind(name).first<{ value: string }>()
 	if (!row) {
 		throw new Error(`configuration not found: ${name}`)
 	}

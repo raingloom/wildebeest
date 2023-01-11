@@ -38,7 +38,9 @@ describe('Wildebeest', () => {
 		const res = await startInstance.handlePostRequest(req, db, accessDomain, accessAud)
 		assert.equal(res.status, 201)
 
-		const { value } = await db.prepare("SELECT value FROM instance_config WHERE key = 'vapid_jwk'").first()
+		const { value } = await db
+			.prepare("SELECT value FROM instance_config WHERE key = 'vapid_jwk'")
+			.first<{ value: string }>()
 		const jwk = JSON.parse(value)
 
 		assert.equal(jwk.key_ops.length, 1)

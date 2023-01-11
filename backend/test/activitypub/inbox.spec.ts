@@ -13,7 +13,7 @@ const kv_cache: any = {
 	async put() {},
 }
 
-const waitUntil = async (p: Promise<void>) => await p
+const waitUntil = () => {}
 
 describe('ActivityPub', () => {
 	test('send Note to non existant user', async () => {
@@ -46,7 +46,7 @@ describe('ActivityPub', () => {
 
 		const entry = await db
 			.prepare('SELECT objects.* FROM inbox_objects INNER JOIN objects ON objects.id=inbox_objects.object_id')
-			.first()
+			.first<{ properties: string }>()
 		const properties = JSON.parse(entry.properties)
 		assert.equal(properties.content, 'test note')
 	})
@@ -84,7 +84,10 @@ describe('ActivityPub', () => {
 		const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'sven', activity, userKEK, waitUntil)
 		assert.equal(res.status, 200)
 
-		const entry = await db.prepare('SELECT * FROM outbox_objects WHERE actor_id=?').bind(remoteActorId).first()
+		const entry = await db
+			.prepare('SELECT * FROM outbox_objects WHERE actor_id=?')
+			.bind(remoteActorId)
+			.first<{ actor_id: string }>()
 		assert.equal(entry.actor_id, remoteActorId)
 	})
 
@@ -109,7 +112,11 @@ describe('ActivityPub', () => {
 		const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 		assert.equal(res.status, 200)
 
-		const entry = await db.prepare('SELECT * FROM actor_notifications').first()
+		const entry = await db.prepare('SELECT * FROM actor_notifications').first<{
+			type: string
+			actor_id: object
+			from_actor_id: object
+		}>()
 		assert.equal(entry.type, 'mention')
 		assert.equal(entry.actor_id.toString(), actorA.id.toString())
 		assert.equal(entry.from_actor_id.toString(), actorB.id.toString())
@@ -150,7 +157,7 @@ describe('ActivityPub', () => {
 		const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 		assert.equal(res.status, 200)
 
-		const entry = await db.prepare('SELECT * FROM actors WHERE id=?').bind(actorB).first()
+		const entry = await db.prepare('SELECT * FROM actors WHERE id=?').bind(actorB).first<{ id: string }>()
 		assert.equal(entry.id, actorB)
 	})
 
@@ -191,7 +198,9 @@ describe('ActivityPub', () => {
 			assert.equal(res.status, 200)
 		}
 
-		const entry = await db.prepare('SELECT * FROM actor_replies').first()
+		const entry = await db
+			.prepare('SELECT * FROM actor_replies')
+			.first<{ actor_id: string; object_id: string; in_reply_to_object_id: string }>()
 		assert.equal(entry.actor_id, actor.id.toString().toString())
 
 		const obj: any = await objects.getObjectById(db, entry.object_id)
@@ -221,7 +230,7 @@ describe('ActivityPub', () => {
 			const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 			assert.equal(res.status, 200)
 
-			const entry = await db.prepare('SELECT * FROM actor_reblogs').first()
+			const entry = await db.prepare('SELECT * FROM actor_reblogs').first<{ actor_id: object; object_id: object }>()
 			assert.equal(entry.actor_id.toString(), actorB.id.toString())
 			assert.equal(entry.object_id.toString(), note.id.toString())
 		})
@@ -243,7 +252,11 @@ describe('ActivityPub', () => {
 			const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 			assert.equal(res.status, 200)
 
-			const entry = await db.prepare('SELECT * FROM actor_notifications').first()
+			const entry = await db.prepare('SELECT * FROM actor_notifications').first<{
+				type: string
+				actor_id: object
+				from_actor_id: object
+			}>()
 			assert(entry)
 			assert.equal(entry.type, 'reblog')
 			assert.equal(entry.actor_id.toString(), actorA.id.toString())
@@ -269,7 +282,7 @@ describe('ActivityPub', () => {
 			const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 			assert.equal(res.status, 200)
 
-			const entry = await db.prepare('SELECT * FROM actor_favourites').first()
+			const entry = await db.prepare('SELECT * FROM actor_favourites').first<{ actor_id: object; object_id: object }>()
 			assert.equal(entry.actor_id.toString(), actorB.id.toString())
 			assert.equal(entry.object_id.toString(), note.id.toString())
 		})
@@ -291,7 +304,9 @@ describe('ActivityPub', () => {
 			const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 			assert.equal(res.status, 200)
 
-			const entry = await db.prepare('SELECT * FROM actor_notifications').first()
+			const entry = await db
+				.prepare('SELECT * FROM actor_notifications')
+				.first<{ type: string; actor_id: object; from_actor_id: object }>()
 			assert.equal(entry.type, 'favourite')
 			assert.equal(entry.actor_id.toString(), actorA.id.toString())
 			assert.equal(entry.from_actor_id.toString(), actorB.id.toString())
@@ -314,7 +329,10 @@ describe('ActivityPub', () => {
 			const res = await ap_inbox.handleRequest(domain, db, kv_cache, 'a', activity, userKEK, waitUntil)
 			assert.equal(res.status, 200)
 
-			const entry = await db.prepare('SELECT * FROM actor_favourites').first()
+			const entry = await db.prepare('SELECT * FROM actor_favourites').first<{
+				actor_id: object
+				object_id: object
+			}>()
 			assert.equal(entry.actor_id.toString(), actorB.id.toString())
 			assert.equal(entry.object_id.toString(), note.id.toString())
 		})
